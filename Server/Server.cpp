@@ -5,6 +5,7 @@ using namespace std;
 #include <winsock2.h>
 #include <string.h>
 #include <time.h>
+#include <string>
 
 #define TIME_PORT	27015
 
@@ -101,7 +102,7 @@ void main()
 	// specifying the way in which the call is made (0 for default).
 	// The two last arguments are optional and will hold the details of the client for further communication. 
 	// NOTE: the last argument should always be the actual size of the client's data-structure (i.e. sizeof(sockaddr)).
-	cout << "Time Server: Wait for clients' requests.\n";
+	cout << "Time Server: Wait for clients' requests.\n\n";
 
 	while (true)
 	{
@@ -114,17 +115,80 @@ void main()
 			return;
 		}
 
-		recvBuff[bytesRecv] = '\0'; //add the null-terminating to make it a string
+		recvBuff[bytesRecv] = '\0'; // Add the null-terminating to make it a string.
 		cout << "Time Server: Recieved: " << bytesRecv << " bytes of \"" << recvBuff << "\" message.\n";
 
-		// Answer client's request by the current time.
+		// Answer client's request by the Client number request.
 
-		// Get the current time.
-		time_t timer;
-		time(&timer);
-		// Parse the current time to printable string.
-		strcpy(sendBuff, ctime(&timer));
+		if (strcmp(recvBuff, "1") == 0) // GetTime
+		{
+			time_t timer;
+			time(&timer);
+			strcpy(sendBuff, ctime(&timer)); // ctime => Parse the current time to printable string.
+		}
+		else if (strcmp(recvBuff, "2") == 0) // GetTimeWithoutDate
+		{
+
+		}
+		else if (strcmp(recvBuff, "3") == 0) // GetTimeSinceEpoch
+		{
+			time_t timer;
+			time(&timer);
+			string timeE = to_string((int)timer);
+			strcpy(sendBuff, timeE.c_str());
+		}
+		else if (strcmp(recvBuff, "4") == 0) // GetClientToServerDelayEstimation
+		{
+
+		}
+		else if (strcmp(recvBuff, "5") == 0) // MeasureRTT
+		{
+
+		}
+		else if (strcmp(recvBuff, "6") == 0) // GetTimeWithoutDateOrSeconds
+		{
+
+		}
+		else if (strcmp(recvBuff, "7") == 0) // GetYear
+		{
+
+		}
+		else if (strcmp(recvBuff, "8") == 0) // GetMonthAndDay
+		{
+
+		}
+		else if (strcmp(recvBuff, "9") == 0) // GetSecondsSinceBeginingOfMonth
+		{
+
+		}
+		else if (strcmp(recvBuff, "10") == 0) // GetWeekOfYear
+		{
+
+		}
+		else if (strcmp(recvBuff, "11") == 0) // GetDaylightSavings
+		{
+
+		}
+		else if (strcmp(recvBuff, "12") == 0) // GetTimeWithoutDateInCity
+		{
+
+		}
+		else if (strcmp(recvBuff, "13") == 0) // MeasureTimeLap
+		{
+
+		}
+		else if (strcmp(recvBuff, "14") == 0) // Exit
+		{
+
+		}
+		else
+		{
+
+		}
+
+		
 		sendBuff[strlen(sendBuff) - 1] = '\0'; //to remove the new-line from the created string
+
 
 		// Sends the answer to the client, using the client address gathered
 		// by recvfrom. 
@@ -138,6 +202,7 @@ void main()
 		}
 
 		cout << "Time Server: Sent: " << bytesSent << "\\" << strlen(sendBuff) << " bytes of \"" << sendBuff << "\" message.\n";
+		cout << "\n";
 	}
 
 	// Closing connections and Winsock.
