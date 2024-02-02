@@ -120,22 +120,31 @@ void main()
 
 		// Answer client's request by the Client number request.
 
+		time_t timer;
+		time(&timer);
+
+		struct tm* timeinfo = localtime(&timer); // UTC+2
+
+		int month = timeinfo->tm_mon + 1;
+		int dayOfMonth = timeinfo->tm_mday;
+		int hours = timeinfo->tm_hour;
+		int minutes = timeinfo->tm_min;
+		int seconds = timeinfo->tm_sec;
+
 		if (strcmp(recvBuff, "1") == 0) // GetTime
 		{
-			time_t timer;
-			time(&timer);
-			strcpy(sendBuff, ctime(&timer)); // ctime => Parse the current time to printable string.
+			strcpy(sendBuff, ctime(&timer)); // ctime => Parse the current time(TimeSinceEpoch) to printable string.
+			sendBuff[strlen(sendBuff) - 1] = '\0'; //to remove the new-line from the created string
 		}
 		else if (strcmp(recvBuff, "2") == 0) // GetTimeWithoutDate
 		{
-
+			string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "3") == 0) // GetTimeSinceEpoch
 		{
-			time_t timer;
-			time(&timer);
-			string timeE = to_string((int)timer);
-			strcpy(sendBuff, timeE.c_str());
+			string timeDisplay = to_string((int)timer);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "4") == 0) // GetClientToServerDelayEstimation
 		{
@@ -147,51 +156,97 @@ void main()
 		}
 		else if (strcmp(recvBuff, "6") == 0) // GetTimeWithoutDateOrSeconds
 		{
-
+			string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "7") == 0) // GetYear
 		{
-
+			string timeDisplay = to_string(1900 + timeinfo->tm_year);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "8") == 0) // GetMonthAndDay
 		{
-
+			string timeDisplay = to_string(timeinfo->tm_mon + 1) + "/" + to_string(timeinfo->tm_mday);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "9") == 0) // GetSecondsSinceBeginingOfMonth
 		{
+			int secondsPassed = ((dayOfMonth - 1) * 24 * 60 * 60 ) + (hours * 60 * 60) + (minutes * 60) + seconds;
 
+			string timeDisplay = to_string(secondsPassed);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "10") == 0) // GetWeekOfYear
 		{
-
+			string timeDisplay = to_string(1 + ((timeinfo->tm_yday + 1) / 7));
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "11") == 0) // GetDaylightSavings
 		{
-
+			if (month >= 3 && dayOfMonth >= 29 && hours >= 2 && minutes >= 0 && seconds >= 0) // 29/03 2:00-> 27/10 2:00 => Summer Clock
+			{
+				if (month <= 10 && dayOfMonth <= 27 && hours <= 2)
+					strcpy(sendBuff, "1"); // Summer Clock
+			}
+			else
+				strcpy(sendBuff, "0"); // Winter Clock
 		}
-		else if (strcmp(recvBuff, "12") == 0) // GetTimeWithoutDateInCity
+		else if ((recvBuff[0] == '1') && (recvBuff[1] == '2')) // GetTimeWithoutDateInCity
 		{
+			if (strcmp(recvBuff, "12-Doha") == 0)
+			{
+				timeinfo->tm_hour += 1;   // Doha -> UTC+3 // My local time (ISR) is UTC+2
+				mktime(timeinfo);
 
+				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+				strcpy(sendBuff, timeDisplay.c_str());
+			}
+			else if (strcmp(recvBuff, "12-Prague") == 0) 
+			{
+				timeinfo->tm_hour -= 1;   // Prague -> UTC+1 // My local time (ISR) is UTC+2
+				mktime(timeinfo);
+
+				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+				strcpy(sendBuff, timeDisplay.c_str());
+			}
+			else if (strcmp(recvBuff, "12-New-York") == 0)
+			{
+				timeinfo->tm_hour -= 7;   // New York -> UTC-5 // My local time (ISR) is UTC+2
+				mktime(timeinfo);
+
+				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+				strcpy(sendBuff, timeDisplay.c_str());
+			}
+			else if (strcmp(recvBuff, "12-Berlin") == 0)
+			{
+				timeinfo->tm_hour -= 1;   // Berlin -> UTC+1 // My local time (ISR) is UTC+2
+				mktime(timeinfo);
+
+				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+				strcpy(sendBuff, timeDisplay.c_str());
+			}
+			else // Other cities
+			{
+				timeinfo->tm_hour -= 2;   // Other -> UTC // My local time (ISR) is UTC+2
+				mktime(timeinfo);
+
+				string timeDisplay = "This city not at the list, global UTC is: " + to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+				strcpy(sendBuff, timeDisplay.c_str());
+			}
 		}
 		else if (strcmp(recvBuff, "13") == 0) // MeasureTimeLap
 		{
 
 		}
-		else if (strcmp(recvBuff, "14") == 0) // Exit
-		{
-
-		}
 		else
 		{
-
+			string timeDisplay = "Eror try again.";
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 
 		
-		sendBuff[strlen(sendBuff) - 1] = '\0'; //to remove the new-line from the created string
 
-
-		// Sends the answer to the client, using the client address gathered
-		// by recvfrom. 
+		// Sends the answer to the client, using the client address gathered by recvfrom. 
 		bytesSent = sendto(m_socket, sendBuff, (int)strlen(sendBuff), 0, (const sockaddr*)&client_addr, client_addr_len);
 		if (SOCKET_ERROR == bytesSent)
 		{
@@ -201,8 +256,7 @@ void main()
 			return;
 		}
 
-		cout << "Time Server: Sent: " << bytesSent << "\\" << strlen(sendBuff) << " bytes of \"" << sendBuff << "\" message.\n";
-		cout << "\n";
+		cout << "Time Server: Sent: " << bytesSent << "\\" << strlen(sendBuff) << " bytes of \"" << sendBuff << "\" message.\n\n";
 	}
 
 	// Closing connections and Winsock.
