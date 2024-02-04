@@ -6,6 +6,7 @@ using namespace std;
 #include <string.h>
 #include <time.h>
 #include <string>
+#include<windows.h>
 
 #define TIME_PORT	27015
 
@@ -118,11 +119,8 @@ void main()
 		recvBuff[bytesRecv] = '\0'; // Add the null-terminating to make it a string.
 		cout << "Time Server: Recieved: " << bytesRecv << " bytes of \"" << recvBuff << "\" message.\n";
 
-		// Answer client's request by the Client number request.
-
 		time_t timer;
 		time(&timer);
-
 		struct tm* timeinfo = localtime(&timer); // UTC+2
 
 		int month = timeinfo->tm_mon + 1;
@@ -131,6 +129,7 @@ void main()
 		int minutes = timeinfo->tm_min;
 		int seconds = timeinfo->tm_sec;
 
+		// Answer client's request by the Client number request.
 		if (strcmp(recvBuff, "1") == 0) // GetTime
 		{
 			strcpy(sendBuff, ctime(&timer)); // ctime => Parse the current time(TimeSinceEpoch) to printable string.
@@ -148,11 +147,14 @@ void main()
 		}
 		else if (strcmp(recvBuff, "4") == 0) // GetClientToServerDelayEstimation
 		{
-
+			DWORD currentTime = GetTickCount();
+			string timeDisplay = to_string(currentTime);
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "5") == 0) // MeasureRTT
 		{
-
+			string timeDisplay = "Request goten at the server.";
+			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "6") == 0) // GetTimeWithoutDateOrSeconds
 		{
