@@ -9,11 +9,16 @@ using namespace std;
 #include<windows.h>
 
 #define TIME_PORT	27015
+#define SUMMER_CLOCK "1"
+#define WINTER_CLOCK "0"
+#define DOHA "12-Doha"
+#define PRAGUE "12-Prague"
+#define NEW_YORK "12-New-York"
+#define BERLIN "12-Berlin"
 
 void main()
 {
 	// Initialize Winsock (Windows Sockets).
-
 	// Create a WSADATA object called wsaData.
 	// The WSADATA structure contains information about the Windows 
 	// Sockets implementation.
@@ -31,9 +36,7 @@ void main()
 
 	// Server side:
 	// Create and bind a socket to an internet address.
-
 	// After initialization, a SOCKET object is ready to be instantiated.
-
 	// Create a SOCKET object called m_socket. 
 	// For this application:	use the Internet address family (AF_INET), 
 	//							datagram sockets (SOCK_DGRAM), 
@@ -55,9 +58,7 @@ void main()
 
 	// For a server to communicate on a network, it must first bind the socket to 
 	// a network address.
-
 	// Need to assemble the required data for connection in sockaddr structure.
-
 	// Create a sockaddr_in object called serverService. 
 	sockaddr_in serverService;
 	// Address family (must be AF_INET - Internet address family).
@@ -73,7 +74,6 @@ void main()
 	serverService.sin_port = htons(TIME_PORT);
 
 	// Bind the socket for client's requests.
-
 	// The bind function establishes a connection to a specified socket.
 	// The function uses the socket handler, the sockaddr structure (which
 	// defines properties of the desired connection) and the length of the
@@ -98,12 +98,15 @@ void main()
 
 	// Get client's requests and answer them.
 	// The recvfrom function receives a datagram and stores the source address.
-	// The buffer for data to be received and its available size are 
-	// returned by recvfrom. The fourth argument is an idicator 
-	// specifying the way in which the call is made (0 for default).
+	// The buffer for data to be received and its available size are returned by recvfrom. 
+	// The fourth argument is an idicator specifying the way in which the call is made (0 for default).
 	// The two last arguments are optional and will hold the details of the client for further communication. 
 	// NOTE: the last argument should always be the actual size of the client's data-structure (i.e. sizeof(sockaddr)).
 	cout << "Time Server: Wait for clients' requests.\n\n";
+
+	// My variables.
+	time_t MTLtimer; // Measure Time Lap timer.
+	bool isMTLTaken = false;
 
 	while (true)
 	{
@@ -121,10 +124,12 @@ void main()
 
 		time_t timer;
 		time(&timer);
-		struct tm* timeinfo = localtime(&timer); // UTC+2
+		struct tm* timeinfo = localtime(&timer); // UTC+2 (Israel time.)
 
+		int year = 1900 + timeinfo->tm_year;
 		int month = timeinfo->tm_mon + 1;
 		int dayOfMonth = timeinfo->tm_mday;
+		int dayOfYear = timeinfo->tm_yday + 1;
 		int hours = timeinfo->tm_hour;
 		int minutes = timeinfo->tm_min;
 		int seconds = timeinfo->tm_sec;
@@ -137,12 +142,12 @@ void main()
 		}
 		else if (strcmp(recvBuff, "2") == 0) // GetTimeWithoutDate
 		{
-			string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
+			string timeDisplay = to_string(hours) + ":" + to_string(minutes) + ":" + to_string(seconds);
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "3") == 0) // GetTimeSinceEpoch
 		{
-			string timeDisplay = to_string((int)timer);
+			string timeDisplay = to_string((int)timer) + " seconds since Epoch.";
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "4") == 0) // GetClientToServerDelayEstimation
@@ -158,29 +163,28 @@ void main()
 		}
 		else if (strcmp(recvBuff, "6") == 0) // GetTimeWithoutDateOrSeconds
 		{
-			string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min);
+			string timeDisplay = to_string(hours) + ":" + to_string(minutes);
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "7") == 0) // GetYear
 		{
-			string timeDisplay = to_string(1900 + timeinfo->tm_year);
+			string timeDisplay = to_string(year);
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "8") == 0) // GetMonthAndDay
 		{
-			string timeDisplay = to_string(timeinfo->tm_mon + 1) + "/" + to_string(timeinfo->tm_mday);
+			string timeDisplay = to_string(month) + "/" + to_string(dayOfMonth);
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "9") == 0) // GetSecondsSinceBeginingOfMonth
 		{
 			int secondsPassed = ((dayOfMonth - 1) * 24 * 60 * 60 ) + (hours * 60 * 60) + (minutes * 60) + seconds;
-
 			string timeDisplay = to_string(secondsPassed);
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "10") == 0) // GetWeekOfYear
 		{
-			string timeDisplay = to_string(1 + ((timeinfo->tm_yday + 1) / 7));
+			string timeDisplay = to_string(1 + (dayOfYear / 7)); // Adding one because starting from week 1.
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "11") == 0) // GetDaylightSavings
@@ -188,14 +192,14 @@ void main()
 			if (month >= 3 && dayOfMonth >= 29 && hours >= 2 && minutes >= 0 && seconds >= 0) // 29/03 2:00-> 27/10 2:00 => Summer Clock
 			{
 				if (month <= 10 && dayOfMonth <= 27 && hours <= 2)
-					strcpy(sendBuff, "1"); // Summer Clock
+					strcpy(sendBuff, SUMMER_CLOCK); // Summer Clock
 			}
 			else
-				strcpy(sendBuff, "0"); // Winter Clock
+				strcpy(sendBuff, WINTER_CLOCK); // Winter Clock
 		}
 		else if ((recvBuff[0] == '1') && (recvBuff[1] == '2')) // GetTimeWithoutDateInCity
 		{
-			if (strcmp(recvBuff, "12-Doha") == 0)
+			if (strcmp(recvBuff, DOHA) == 0)
 			{
 				timeinfo->tm_hour += 1;   // Doha -> UTC+3 // My local time (ISR) is UTC+2
 				mktime(timeinfo);
@@ -203,7 +207,7 @@ void main()
 				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
 				strcpy(sendBuff, timeDisplay.c_str());
 			}
-			else if (strcmp(recvBuff, "12-Prague") == 0) 
+			else if (strcmp(recvBuff, PRAGUE) == 0) 
 			{
 				timeinfo->tm_hour -= 1;   // Prague -> UTC+1 // My local time (ISR) is UTC+2
 				mktime(timeinfo);
@@ -211,7 +215,7 @@ void main()
 				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
 				strcpy(sendBuff, timeDisplay.c_str());
 			}
-			else if (strcmp(recvBuff, "12-New-York") == 0)
+			else if (strcmp(recvBuff, NEW_YORK) == 0)
 			{
 				timeinfo->tm_hour -= 7;   // New York -> UTC-5 // My local time (ISR) is UTC+2
 				mktime(timeinfo);
@@ -219,7 +223,7 @@ void main()
 				string timeDisplay = to_string(timeinfo->tm_hour) + ":" + to_string(timeinfo->tm_min) + ":" + to_string(timeinfo->tm_sec);
 				strcpy(sendBuff, timeDisplay.c_str());
 			}
-			else if (strcmp(recvBuff, "12-Berlin") == 0)
+			else if (strcmp(recvBuff, BERLIN) == 0)
 			{
 				timeinfo->tm_hour -= 1;   // Berlin -> UTC+1 // My local time (ISR) is UTC+2
 				mktime(timeinfo);
@@ -238,7 +242,22 @@ void main()
 		}
 		else if (strcmp(recvBuff, "13") == 0) // MeasureTimeLap
 		{
-
+			if (isMTLTaken && (int)(timer - MTLtimer) > 180) // 3 minutes = 180 seconds
+				isMTLTaken = false;
+			if (isMTLTaken == false)
+			{
+				time(&MTLtimer);
+				string timeDisplay = "The measurement was started!";
+				strcpy(sendBuff, timeDisplay.c_str());
+				isMTLTaken = true;
+			}
+			else // isMTLTaken == true
+			{
+				int timePast = (int)(timer - MTLtimer);
+				string timeDisplay = "The time that passed between the two requests is: " + to_string(timePast) + " seconds.";
+				strcpy(sendBuff, timeDisplay.c_str());
+				isMTLTaken = false;
+			}
 		}
 		else
 		{
@@ -247,7 +266,6 @@ void main()
 		}
 
 		
-
 		// Sends the answer to the client, using the client address gathered by recvfrom. 
 		bytesSent = sendto(m_socket, sendBuff, (int)strlen(sendBuff), 0, (const sockaddr*)&client_addr, client_addr_len);
 		if (SOCKET_ERROR == bytesSent)
