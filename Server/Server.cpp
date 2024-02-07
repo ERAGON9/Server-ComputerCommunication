@@ -1,4 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <iostream>
 using namespace std;
 #pragma comment(lib, "Ws2_32.lib")
@@ -6,7 +7,8 @@ using namespace std;
 #include <string.h>
 #include <time.h>
 #include <string>
-#include<windows.h>
+#include <windows.h>
+#include <map>
 
 #define TIME_PORT	27015
 #define SUMMER_CLOCK "1"
@@ -105,8 +107,7 @@ void main()
 	cout << "Time Server: Wait for clients' requests.\n\n";
 
 	// My variables.
-	time_t MTLtimer; // Measure Time Lap timer.
-	bool isMTLTaken = false;
+	map<pair<string, unsigned short>, int> clientMap;
 
 	while (true)
 	{
@@ -120,7 +121,7 @@ void main()
 		}
 
 		recvBuff[bytesRecv] = '\0'; // Add the null-terminating to make it a string.
-		cout << "Time Server: Recieved: " << bytesRecv << " bytes of \"" << recvBuff << "\" message.\n";
+		cout << "Time Server: Received: " << bytesRecv << " bytes of \"" << recvBuff << "\" message.\n";
 
 		time_t timer;
 		time(&timer);
@@ -147,7 +148,7 @@ void main()
 		}
 		else if (strcmp(recvBuff, "3") == 0) // GetTimeSinceEpoch
 		{
-			string timeDisplay = to_string((int)timer) + " seconds since Epoch.";
+			string timeDisplay = to_string((int)timer) + " seconds since Epoch";
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "4") == 0) // GetClientToServerDelayEstimation
@@ -158,7 +159,7 @@ void main()
 		}
 		else if (strcmp(recvBuff, "5") == 0) // MeasureRTT
 		{
-			string timeDisplay = "Request goten at the server.";
+			string timeDisplay = "Request goten at the server";
 			strcpy(sendBuff, timeDisplay.c_str());
 		}
 		else if (strcmp(recvBuff, "6") == 0) // GetTimeWithoutDateOrSeconds
@@ -242,21 +243,29 @@ void main()
 		}
 		else if (strcmp(recvBuff, "13") == 0) // MeasureTimeLap
 		{
-			if (isMTLTaken && (int)(timer - MTLtimer) > 180) // 3 minutes = 180 seconds
-				isMTLTaken = false;
-			if (isMTLTaken == false)
+			string clientIP = inet_ntoa(((struct sockaddr_in*)&client_addr)->sin_addr);
+			unsigned short clientPort = ntohs(((struct sockaddr_in*)&client_addr)->sin_port);
+
+			auto iterator = clientMap.find(make_pair(clientIP, clientPort));
+			if (iterator == clientMap.end()) // If client information doesn't exist, add it to the map.
 			{
-				time(&MTLtimer);
-				string timeDisplay = "The measurement was started!";
-				strcpy(sendBuff, timeDisplay.c_str());
-				isMTLTaken = true;
+				clientMap[make_pair(clientIP, clientPort)] = (int)timer;
+				strcpy(sendBuff, "Measurement started!");
 			}
-			else // isMTLTaken == true
+			else // If client information exists.
 			{
-				int timePast = (int)(timer - MTLtimer);
-				string timeDisplay = "The time that passed between the two requests is: " + to_string(timePast) + " seconds.";
-				strcpy(sendBuff, timeDisplay.c_str());
-				isMTLTaken = false;
+				if ((int)timer - iterator->second > 180) // 3 minutes = 180 seconds.
+				{
+					clientMap[make_pair(clientIP, clientPort)] = (int)timer;
+					strcpy(sendBuff, "Measurement started!");
+				}
+				else // Time past less than 3 minutes.
+				{
+					int timeElapsed = (int)timer - iterator->second;
+					sprintf(sendBuff, "Time elapsed since last request: %d seconds", timeElapsed);
+					clientMap[make_pair(clientIP, clientPort)] = 0;
+					// Update the stored time at Epoch for this client to be more than 180 secounds, therefore next request will restart the measurement.
+				}
 			}
 		}
 		else
